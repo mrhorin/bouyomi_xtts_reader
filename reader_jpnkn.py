@@ -2,8 +2,30 @@ import asyncio
 import uuid
 import subprocess
 import re
+import argparse
 from TTS.api import TTS
 import websockets
+
+# -----------------------------
+# コマンドライン引数
+# -----------------------------
+parser = argparse.ArgumentParser(description="WebSocket TTS Server")
+parser.add_argument(
+    "--voice",
+    type=str,
+    required=True,
+    help="Path to speaker wav file",
+)
+parser.add_argument(
+    "--temperature",
+    type=float,
+    default=0.9,
+    help="TTS temperature (default: 0.9)",
+)
+args = parser.parse_args()
+
+SPEAKER_WAV = args.voice
+TEMPERATURE = args.temperature
 
 HOST = "127.0.0.1"
 PORT = 50002
@@ -11,8 +33,8 @@ PORT = 50002
 print("Loading XTTS model...")
 tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to("cuda")
 print("XTTS ready.")
-
-SPEAKER_WAV = "my_voice.wav"
+print("Using voice:", SPEAKER_WAV)
+print("Temperature:", TEMPERATURE)
 
 queue = asyncio.Queue()
 
@@ -47,17 +69,15 @@ async def tts_worker():
 
             output_path = f"/tmp/{uuid.uuid4()}.wav"
 
-            # 音声生成（ブロック処理なのでスレッドに逃がす）
             await asyncio.to_thread(
                 tts.tts_to_file,
                 text=text,
                 speaker_wav=SPEAKER_WAV,
                 language="ja",
                 file_path=output_path,
-                temperature=1.1,
-                )
+                temperature=TEMPERATURE,
+            )
 
-            # 再生もブロックなのでスレッドへ
             await asyncio.to_thread(play_audio, output_path)
 
         except Exception as e:
