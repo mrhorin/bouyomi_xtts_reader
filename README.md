@@ -1,4 +1,4 @@
-# XTTS WebSocket Reader
+# 棒読みちゃん互換XTTSリーダー
 
 jpnkn掲示板（棒読みちゃん互換 WebSocket）から送られてくるテキストを  
 XTTS (xtts_v2) を使って好きな声で読み上げるローカルTTSサーバー
