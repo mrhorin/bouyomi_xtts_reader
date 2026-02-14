@@ -14,7 +14,7 @@ XTTS (xtts_v2) を使って好きな声で読み上げるローカルTTSサー�
 
 ---
 
-## 初回セットアップ
+## 環境構築 
 
 プロジェクトフォルダへ移動
 ```bash
@@ -52,7 +52,7 @@ python src/main.py --voice your_voice.wav
 ## オプション
 
 ```bash
-usage: reader_jpnkn.py [-h] --voice VOICE [--temperature TEMPERATURE] [--host HOST]
+usage: main.py [-h] --voice VOICE [--temperature TEMPERATURE] [--host HOST]
                        [--port PORT]
 
 WebSocket Bouyomi-compatible TTS Reader (XTTS)
