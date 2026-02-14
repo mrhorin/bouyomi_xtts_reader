@@ -54,7 +54,8 @@ async def tts_worker():
                 speaker_wav=SPEAKER_WAV,
                 language="ja",
                 file_path=output_path,
-            )
+                temperature=1.1,
+                )
 
             # 再生もブロックなのでスレッドへ
             await asyncio.to_thread(play_audio, output_path)
