@@ -85,6 +85,8 @@ def normalize_text_for_tts(text: str) -> str:
     # ｗ → ワラ
     s = re.sub(r"[ｗw]+", "ワラ", s)
 
+    s = re.sub(r"レス(?=\d)", "れす", s)
+
     # 数字を漢字へ変換
     def replace_number(match):
         num = int(match.group())
