@@ -46,7 +46,7 @@ sudo apt install -y ffmpeg mecab libmecab-dev mecab-ipadic-utf8
 
 サンプル音声ファイルへのパスを指定し、スクリプトを実行すると`ws://localhost:50002`で listen する
 ```bash
-python reader_jpkn.py --voice your_voice.wav
+python src/main.py --voice your_voice.wav
 ```
 
 ## オプション
