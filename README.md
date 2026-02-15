@@ -16,13 +16,9 @@ XTTS (xtts_v2) を使って好きな声で読み上げるローカルTTSサー�
 
 ## 環境構築 
 
-プロジェクトフォルダへ移動
-```bash
-cd your_project_directory
-```
-
 仮想環境を作成
 ```bash
+cd boyomi_xtts_reader
 python3 -m venv venv
 ```
 
@@ -31,7 +27,12 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-pipパッケージをインストール
+torch系ライブラリを手動インストール
+``bash
+pip install torch==2.3.1+cu121 torchaudio==2.3.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+```
+
+他のライブラリをインストール
 ```bash
 pip install -r requirements.txt
 ```
