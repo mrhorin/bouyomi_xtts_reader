@@ -1,3 +1,8 @@
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+torch==2.3.1+cu121
+torchaudio==2.3.1+cu121
+
 absl-py==2.4.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.3

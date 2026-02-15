@@ -27,12 +27,7 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-torch系ライブラリを手動インストール
-``bash
-pip install torch==2.3.1+cu121 torchaudio==2.3.1+cu121 --index-url https://download.pytorch.org/whl/cu121
-```
-
-他のライブラリをインストール
+pipパッケージをインストール
 ```bash
 pip install -r requirements.txt
 ```
