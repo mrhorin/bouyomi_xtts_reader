@@ -149,7 +149,7 @@ def normalize_text_for_tts(text: str):
     s = re.sub(r"https?://\S+", "ゆーあーるえる省略", s)
 
     # ｗ → ワラ
-    s = re.sub(r"[ｗw]+", "ワラ", s)
+    s = re.sub(r"[ｗ]+", "ワラ", s)
 
     # 文末ワラは少し区切る
     s = re.sub(r"ワラ$", "、ワラ。", s)
