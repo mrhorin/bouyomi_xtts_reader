@@ -48,17 +48,22 @@ python src/main.py --voice your_voice.wav
 ## オプション
 
 ```bash
-usage: main.py [-h] --voice VOICE [--temperature TEMPERATURE] [--host HOST]
-                       [--port PORT]
+usage: main.py [-h] --voice VOICE [--temperature TEMPERATURE] [--top_p TOP_P]
+               [--repetition_penalty REPETITION_PENALTY] [--speed SPEED] [--host HOST]
+               [--port PORT]
 
 WebSocket Bouyomi-compatible TTS Reader (XTTS)
 
 options:
   -h, --help            show this help message and exit
-  --voice VOICE         Path to speaker voice file (wav/mp3/etc). Recommended: wav.
+  --voice VOICE         Path to speaker reference audio (wav/mp3/etc). Recommended: wav.
   --temperature TEMPERATURE
-                        TTS temperature (default: 0.9)
-  --host HOST           Listen host (default: 127.0.0.1)
-  --port PORT           Listen port (default: 50002)
+                        Sampling temperature (higher = more variation). Default: 0.9
+  --top_p TOP_P         Nucleus sampling top_p (lower = more stable). Default: 0.9
+  --repetition_penalty REPETITION_PENALTY
+                        Penalty for repetition (higher = less repetition). Default: 1.1
+  --speed SPEED         Speech speed (1.0 = normal). Default: 1.0
+  --host HOST           Listen host. Default: 127.0.0.1
+  --port PORT           Listen port. Default: 50002
 ```
 
