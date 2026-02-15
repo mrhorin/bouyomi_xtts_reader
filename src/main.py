@@ -146,7 +146,7 @@ def normalize_text_for_tts(text: str):
     s = text.strip()
 
     # URLは読まない（必要なら「URL」とだけ読む）
-    s = re.sub(r"https?://\S+", "ゆーあーるえる省略", s)
+    s = re.sub(r"https?://\S+", "、りんく。", s)
 
     # ｗ → ワラ
     s = re.sub(r"[ｗ]+", "ワラ", s)
