@@ -388,12 +388,15 @@ async def handler(websocket):
 
 
 async def main():
-    print(f"Listening WebSocket on ws://{HOST}:{PORT}")
+    print(f"\n\nWebSocket待ち受け中...(ws://{HOST}:{PORT})")
     asyncio.create_task(tts_worker())
     async with websockets.serve(handler, HOST, PORT):
         await asyncio.Future()  # 永久待機
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n読み込み停止")
 
