@@ -138,6 +138,57 @@ def extract_bouyomi_text(message: str) -> str:
     return s
 
 
+# 大文字英字の連続を日本語読みへ変換
+def spell_out_acronym(match):
+    mapping = {
+        "A": "えー",
+        "B": "びー",
+        "C": "しー",
+        "D": "でぃー",
+        "E": "いー",
+        "F": "えふ",
+        "G": "じー",
+        "H": "えいち",
+        "I": "あい",
+        "J": "じぇー",
+        "K": "けー",
+        "L": "える",
+        "M": "えむ",
+        "N": "えぬ",
+        "O": "おー",
+        "P": "ぴー",
+        "Q": "きゅー",
+        "R": "あーる",
+        "S": "えす",
+        "T": "てぃー",
+        "U": "ゆー",
+        "V": "ぶい",
+        "W": "だぶりゅー",
+        "X": "えっくす",
+        "Y": "わい",
+        "Z": "ぜっと",
+    }
+
+    word = match.group()
+    return "".join(mapping.get(c, c) for c in word)
+
+
+def katakana_to_hiragana(text: str) -> str:
+    """
+    カタカナをひらがなに変換する
+    （全角カタカナのみ対応）
+    """
+    result = []
+    for ch in text:
+        code = ord(ch)
+        # 全角カタカナ範囲
+        if 0x30A1 <= code <= 0x30F6:
+            result.append(chr(code - 0x60))
+        else:
+            result.append(ch)
+    return "".join(result)
+
+
 def normalize_text_for_tts(text: str):
     """
     表示用テキストと読み上げ用テキストを分けて返す
@@ -154,6 +205,12 @@ def normalize_text_for_tts(text: str):
     # 文末ワラは少し区切る
     s = re.sub(r"ワラ$", "、ワラ。", s)
 
+    # カタカナをひらがなに
+    s = katakana_to_hiragana(s)
+
+    # 大文字英字を
+    s = re.sub(r"\b[A-Z]{2,}\b", spell_out_acronym, s)
+
     # 数字を漢字へ変換
     def replace_number(match):
         try:
@@ -162,16 +219,16 @@ def normalize_text_for_tts(text: str):
             return match.group()
 
     s = re.sub(r"\d+", replace_number, s)
-
+    
     # --- レス番号検出 ---
     # 例: レス350 → れす三百五十、
-    m = re.match(r"^レス([一二三四五六七八九十百千万億〇零]+)", s)
+    m = re.match(r"^れす([一二三四五六七八九十百千万億〇零]+)", s)
     if m:
         number_part = m.group(1)
         # 読み上げ用
         speak_prefix = f"れす{number_part}、"
         # 表示用（レス番号削除）
-        display_text = re.sub(r"^レス[一二三四五六七八九十百千万億〇零]+", "", s).strip()
+        display_text = re.sub(r"^れす[一二三四五六七八九十百千万億〇零]+", "", s).strip()
         speak_text = speak_prefix + display_text
         return display_text, speak_text
 
