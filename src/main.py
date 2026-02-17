@@ -112,6 +112,46 @@ print("Latents:", f"gpt_cond_len={GPT_COND_LEN}s, max_ref_length={MAX_REF_LENGTH
 # -----------------------------
 queue: asyncio.Queue[str] = asyncio.Queue()
 
+# -----------------------------
+# conditioning latents キャッシュ
+# -----------------------------
+xtts_model = None
+gpt_cond_latent = None
+speaker_embedding = None
+use_cached_inference = False
+
+try:
+    # TTS APIの中の実モデル（XTTS）にアクセス
+    xtts_model = tts.synthesizer.tts_model
+
+    print("Building conditioning latents (cached)...")
+    # TTS/XTTSの実装差を吸収するため、引数はなるべく名前付きで渡す
+    # 成功すると (gpt_cond_latent, speaker_embedding) が得られる
+    gpt_cond_latent, speaker_embedding = xtts_model.get_conditioning_latents(
+        audio_path=SPEAKER_WAV,
+        gpt_cond_len=GPT_COND_LEN,
+        max_ref_length=MAX_REF_LENGTH,
+        sound_norm_refs=True,
+    )
+
+    use_cached_inference = True
+    print("Latents cached OK. (Will use xtts_model.inference)")
+except TypeError:
+    # get_conditioning_latents の引数名が違う場合があるので、位置引数で再トライ
+    try:
+        print("Retrying conditioning latents with positional args...")
+        gpt_cond_latent, speaker_embedding = xtts_model.get_conditioning_latents(
+            SPEAKER_WAV, GPT_COND_LEN, MAX_REF_LENGTH, True
+        )
+        use_cached_inference = True
+        print("Latents cached OK. (Will use xtts_model.inference)")
+    except Exception as e:
+        print("[WARN] Could not cache latents (positional retry failed):", e)
+        use_cached_inference = False
+except Exception as e:
+    print("[WARN] Could not cache latents:", e)
+    use_cached_inference = False
+
 
 def play_audio(path: str) -> None:
     subprocess.run(
@@ -265,47 +305,6 @@ def write_wav_int16(path: str, wav_float, sample_rate: int) -> None:
         wf.setsampwidth(2)  # int16
         wf.setframerate(sample_rate)
         wf.writeframes(pcm16.tobytes())
-
-
-# -----------------------------
-# conditioning latents キャッシュ
-# -----------------------------
-xtts_model = None
-gpt_cond_latent = None
-speaker_embedding = None
-use_cached_inference = False
-
-try:
-    # TTS APIの中の実モデル（XTTS）にアクセス
-    xtts_model = tts.synthesizer.tts_model
-
-    print("Building conditioning latents (cached)...")
-    # TTS/XTTSの実装差を吸収するため、引数はなるべく名前付きで渡す
-    # 成功すると (gpt_cond_latent, speaker_embedding) が得られる
-    gpt_cond_latent, speaker_embedding = xtts_model.get_conditioning_latents(
-        audio_path=SPEAKER_WAV,
-        gpt_cond_len=GPT_COND_LEN,
-        max_ref_length=MAX_REF_LENGTH,
-        sound_norm_refs=True,
-    )
-
-    use_cached_inference = True
-    print("Latents cached OK. (Will use xtts_model.inference)")
-except TypeError:
-    # get_conditioning_latents の引数名が違う場合があるので、位置引数で再トライ
-    try:
-        print("Retrying conditioning latents with positional args...")
-        gpt_cond_latent, speaker_embedding = xtts_model.get_conditioning_latents(
-            SPEAKER_WAV, GPT_COND_LEN, MAX_REF_LENGTH, True
-        )
-        use_cached_inference = True
-        print("Latents cached OK. (Will use xtts_model.inference)")
-    except Exception as e:
-        print("[WARN] Could not cache latents (positional retry failed):", e)
-        use_cached_inference = False
-except Exception as e:
-    print("[WARN] Could not cache latents:", e)
-    use_cached_inference = False
 
 
 def synthesize_to_file(text: str, out_path: str) -> None:
