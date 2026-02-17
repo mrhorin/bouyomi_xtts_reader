@@ -1,4 +1,5 @@
 import asyncio
+import os
 import uuid
 import subprocess
 import re
@@ -85,6 +86,10 @@ PORT = args.port
 GPT_COND_LEN = args.gpt_cond_len
 MAX_REF_LENGTH = args.max_ref_length
 
+# レス先頭の "名前)" で指定する音声ファイル（./src/wav/ に .wav で配置）
+ALLOWED_VOICE_NAMES = ["nakayaman", "yamamoto_taro", "wakamoto", "minorin"]
+WAV_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wav")
+
 # XTTSは24kHzで扱うことが多いので固定（必要なら変えてOK）
 OUTPUT_SR = 24000
 
@@ -108,9 +113,9 @@ print(
 print("Latents:", f"gpt_cond_len={GPT_COND_LEN}s, max_ref_length={MAX_REF_LENGTH}s")
 
 # -----------------------------
-# 音声キュー（重なり防止）
+# 音声キュー（重なり防止） (speak_text, speaker_wav_override or None)
 # -----------------------------
-queue: asyncio.Queue[str] = asyncio.Queue()
+queue: asyncio.Queue[Tuple[str, Optional[str]]] = asyncio.Queue()
 
 # -----------------------------
 # conditioning latents キャッシュ
@@ -159,6 +164,35 @@ def play_audio(path: str) -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+def parse_voice_override(text: str) -> Tuple[str, Optional[str]]:
+    """
+    レス先頭の "音声ファイル名)本文" を解析する。
+    先頭に「レス123」などがある場合は、その直後から音声コマンドを探す。
+    有効な名前でファイルが存在すれば (normalize用本文, wavの絶対パス) を返す。
+    そうでなければ (元のtext, None) を返す（デフォルト音声で読み上げる）。
+    """
+    # 先頭のレス番号（レス + 数字）を除いた残りで音声コマンドを探す
+    rest = text
+    prefix = ""
+    m_res = re.match(r"^レス\s*\d+\s*", text)
+    if m_res:
+        prefix = m_res.group(0)  # "レス123 " など（normalize に渡すため保持）
+        rest = text[m_res.end() :]
+
+    m = re.match(r"^([a-zA-Z0-9_]+)\)\s*(.*)", rest, re.DOTALL)
+    if not m:
+        return text, None
+    name = m.group(1)
+    body = m.group(2)
+    if name not in ALLOWED_VOICE_NAMES:
+        return text, None
+    wav_path = os.path.join(WAV_DIR, f"{name}.wav")
+    if not os.path.isfile(wav_path):
+        return text, None
+    # レス番号があった場合は prefix + 本文、なければ本文だけ
+    return (prefix + body).strip(), wav_path
 
 
 def extract_bouyomi_text(message: str) -> str:
@@ -259,7 +293,7 @@ def normalize_text_for_tts(text: str):
             return match.group()
 
     s = re.sub(r"\d+", replace_number, s)
-    
+
     # --- レス番号検出 ---
     # 例: レス350 → れす三百五十、
     m = re.match(r"^れす([一二三四五六七八九十百千万億〇零]+)", s)
@@ -307,12 +341,27 @@ def write_wav_int16(path: str, wav_float, sample_rate: int) -> None:
         wf.writeframes(pcm16.tobytes())
 
 
-def synthesize_to_file(text: str, out_path: str) -> None:
+def synthesize_to_file(text: str, out_path: str, speaker_wav_override: Optional[str] = None) -> None:
     """
     可能なら cached latents を使って推論。
-    ダメなら tts.tts_to_file にフォールバック。
+    speaker_wav_override が指定されていればその音声ファイルで tts_to_file。
+    指定がなければキャッシュ or デフォルト SPEAKER_WAV で推論。
     """
     global use_cached_inference
+
+    if speaker_wav_override is not None:
+        # レス指定の音声ファイルでその回だけ読み上げ
+        tts.tts_to_file(
+            text=text,
+            speaker_wav=speaker_wav_override,
+            language="ja",
+            file_path=out_path,
+            temperature=TEMPERATURE,
+            top_p=TOP_P,
+            repetition_penalty=REPETITION_PENALTY,
+            speed=SPEED,
+        )
+        return
 
     if use_cached_inference and xtts_model is not None and gpt_cond_latent is not None and speaker_embedding is not None:
         try:
@@ -351,12 +400,12 @@ async def tts_worker():
     キューを1件ずつ処理するワーカー
     """
     while True:
-        text = await queue.get()
+        speak_text, speaker_override = await queue.get()
         try:
             output_path = f"/tmp/{uuid.uuid4()}.wav"
 
             # 音声生成（ブロック処理なのでスレッドに逃がす）
-            await asyncio.to_thread(synthesize_to_file, text, output_path)
+            await asyncio.to_thread(synthesize_to_file, speak_text, output_path, speaker_override)
 
             # 再生もブロックなのでスレッドへ
             await asyncio.to_thread(play_audio, output_path)
@@ -374,7 +423,8 @@ async def handler(websocket):
         if not text:
             continue
 
-        display_text, speak_text = normalize_text_for_tts(text)
+        body, speaker_override = parse_voice_override(text)
+        display_text, speak_text = normalize_text_for_tts(body)
         if not speak_text:
             continue
 
@@ -382,8 +432,8 @@ async def handler(websocket):
         if display_text:
             print(display_text)
 
-        # 🔹 読み上げはレス番号込み
-        await queue.put(speak_text)
+        # 🔹 読み上げはレス番号込み（speaker_override は None ならキャッシュ音声）
+        await queue.put((speak_text, speaker_override))
 
 
 async def main():
